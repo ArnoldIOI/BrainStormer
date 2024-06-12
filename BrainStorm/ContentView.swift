@@ -82,6 +82,18 @@ struct ContentView: View {
 
                     // Swipable Card
                     SwipableCard(ideas: $ideas, activeIdeaIndex: $activeIdeaIndex, idea: $idea, generateIdeas: generateIdeas)
+                    
+                    // Bottom index and count
+                    if let activeIndex = activeIdeaIndex {
+                        Text("Idea \(activeIndex + 1) of \(ideas.count)")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(10)
+                            .shadow(color: .black, radius: 10, x: 5, y: 5)
+                            .padding(.horizontal, 40)
+                    }
                 }
                 Spacer()
                 Spacer()
