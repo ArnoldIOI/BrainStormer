@@ -99,7 +99,42 @@ struct ContentView: View {
     }
 
     private func generateIdeas(basedOn idea: String) {
-        ideas.append("New ideas based on \(idea) \(ideas.count)")
+        guard let url = URL(string: "http://localhost:5000/api/generate") else {
+            print("Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["idea": idea]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        // Show loading indicator
+        isLoading = true
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            
+            DispatchQueue.main.async {
+                // Hide loading indicator
+                self.isLoading = false
+            }
+            
+            guard let data = data, error == nil else {
+                print("Network error: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let newIdeas = jsonResponse["ideas"] as? [[String: String]] {
+                DispatchQueue.main.async {
+                    self.ideas.append(contentsOf: newIdeas.compactMap { $0["description"] })
+                }
+            } else {
+                print("Invalid response from server")
+            }
+        }.resume()
     }
 }
 
@@ -131,8 +166,11 @@ struct SwipableCard: View {
                             .onEnded { gesture in
                                 if gesture.translation.width > 100 {
                                     withAnimation {
-                                        generateIdeas(idea)
-                                        activeIdeaIndex = ideas.count - 1
+                                        if activeIndex == ideas.count - 1 {
+                                            generateIdeas(idea)
+                                        }else {
+                                            activeIdeaIndex = activeIndex + 1
+                                        }
                                     }
                                 } else if gesture.translation.width < -100 {
                                     withAnimation {
