@@ -70,7 +70,7 @@ struct ContentView: View {
                     }
                 } else {
                     // Top idea text
-                    Text(ideas.first ?? "")
+                    Text(idea)
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
