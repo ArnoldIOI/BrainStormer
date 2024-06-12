@@ -141,16 +141,24 @@ struct ContentView: View {
     }
 
     private func generateIdeas(basedOn idea: String) {
-        guard let url = URL(string: "http://localhost:5000/api/generate") else {
+        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             print("Invalid URL")
             return
         }
-
+        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body: [String: Any] = ["idea": idea]
+        request.setValue("Bearer OPENAI_API_KEY", forHTTPHeaderField: "Authorization")
+        
+        let body: [String: Any] = [
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                ["role": "system", "content": "You are now a genius full of clever ideas. I will give you a topic, please help me brainstorm. Your main task is to expand ideas based on the topic and provide a short idea in one sentence. Output format should be JSON with content divided into 'topic' and 'description'. Just need the JSON, nothing else."],
+                ["role": "user", "content": idea]
+            ],
+            "n": 5
+        ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
         // Show loading indicator
@@ -167,11 +175,19 @@ struct ContentView: View {
                 print("Network error: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
-
+            
             if let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-               let newIdeas = jsonResponse["ideas"] as? [[String: String]] {
+               let choices = jsonResponse["choices"] as? [[String: Any]] {
                 DispatchQueue.main.async {
-                    self.ideas.append(contentsOf: newIdeas.compactMap { $0["description"] })
+                    self.ideas.append(contentsOf: choices.compactMap {
+                        if let message = $0["message"] as? [String: Any],
+                           let content = message["content"] as? String,
+                           let jsonData = content.data(using: .utf8),
+                           let idea = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: String] {
+                            return idea["description"]
+                        }
+                        return nil
+                    })
                 }
             } else {
                 print("Invalid response from server")
