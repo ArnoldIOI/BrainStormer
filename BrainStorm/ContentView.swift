@@ -13,6 +13,8 @@ struct ContentView: View {
     @State private var showTextField = false
     @State private var isEditing = false
     @State private var activeIdeaIndex: Int? = nil
+    @State private var isLoading = false
+
 
     var body: some View {
         ZStack {
@@ -105,6 +107,16 @@ struct ContentView: View {
                         showTextField.toggle()
                     }
                 }
+            }
+            
+            // ProgressView for loading state
+            if isLoading {
+                ProgressView("Generating Ideas...")
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .padding()
+                    .background(Color.black.opacity(0.7))
+                    .cornerRadius(10)
+                    .shadow(color: .black, radius: 10, x: 5, y: 5)
             }
         }
         .animation(.easeInOut(duration: 0.5), value: ideas)
