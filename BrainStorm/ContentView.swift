@@ -111,13 +111,31 @@ struct ContentView: View {
             
             // ProgressView for loading state
             if isLoading {
-                ProgressView("Generating Ideas...")
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                    
+                    VStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.5)
+                            .padding(.bottom, 10)
+                        
+                        Text("Generating Ideas...")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                    }
                     .padding()
-                    .background(Color.black.opacity(0.7))
+                    .background(
+                        LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                            .opacity(0.9)
+                    )
                     .cornerRadius(10)
                     .shadow(color: .black, radius: 10, x: 5, y: 5)
+                }
             }
+
+
         }
         .animation(.easeInOut(duration: 0.5), value: ideas)
     }
