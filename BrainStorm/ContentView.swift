@@ -14,6 +14,11 @@ struct ContentView: View {
     @State private var isEditing = false
     @State private var activeIdeaIndex: Int? = nil
     @State private var isLoading = false
+    @State private var typingText: String = ""
+    private let fullText: String = "What's on your mind?"
+    private let typingSpeed: Double = 0.1
+    private let pauseDuration: Double = 1.0
+    @State private var timer: Timer?
 
 
     var body: some View {
@@ -55,7 +60,7 @@ struct ContentView: View {
                             isEditing = true
                         }
                     } else {
-                        Text("What's on your mind?")
+                        Text(typingText)
                             .font(.headline)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -64,11 +69,8 @@ struct ContentView: View {
                             .cornerRadius(10)
                             .shadow(color: .black, radius: 10, x: 5, y: 5)
                             .padding(.horizontal, 40)
-                            .onTapGesture {
-                                withAnimation {
-                                    showTextField.toggle()
-                                }
-                            }
+                            .onAppear(perform: startTyping)
+                            .onDisappear(perform: stopTyping)
                     }
                 } else {
                     // Top idea text
@@ -139,7 +141,30 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: ideas)
     }
-
+    
+    private func startTyping() {
+        timer = Timer.scheduledTimer(withTimeInterval: typingSpeed, repeats: true) { _ in
+            updateText()
+        }
+    }
+    
+    private func stopTyping() {
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    private func updateText() {
+        if typingText.count < fullText.count {
+            typingText.append(fullText[fullText.index(fullText.startIndex, offsetBy: typingText.count)])
+        } else {
+            timer?.invalidate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + pauseDuration) {
+                typingText = ""
+                startTyping()
+            }
+        }
+    }
+    
     private func generateIdeas(basedOn idea: String) {
         guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             print("Invalid URL")
