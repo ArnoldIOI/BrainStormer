@@ -20,85 +20,35 @@ struct ContentView: View {
     private let pauseDuration: Double = 1.0
     @State private var timer: Timer?
 
-
     var body: some View {
         ZStack {
             LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
                 .edgesIgnoringSafeArea(.all)
 
             VStack(spacing: 20) {
-                Text("BrainStormer")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(LinearGradient(gradient: Gradient(colors: [.black.opacity(0.8), .black.opacity(0.6)]), startPoint: .top, endPoint: .bottom))
-                    .cornerRadius(10)
-                    .shadow(color: .black, radius: 10, x: 5, y: 5)
-                    .opacity((!showTextField && ideas.isEmpty) ? 1 : 0)
+                HeaderView(showTextField: $showTextField, ideas: $ideas)
 
                 Spacer()
 
-                // What's on your mind
                 if ideas.isEmpty {
-                    if showTextField {
-                        TextField("What's on your mind?", text: $idea, onCommit: {
-                            if !idea.isEmpty {
-                                generateIdeas(basedOn: idea)
-                                idea = ""
-                                showTextField = false
-                                isEditing = false
-                            }
-                        })
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding()
-                        .background(Color.white.opacity(0.8))
-                        .cornerRadius(10)
-                        .shadow(color: .black, radius: 10, x: 5, y: 5)
-                        .padding(.horizontal, 40)
-                        .onTapGesture {
-                            isEditing = true
-                        }
-                    } else {
-                        Text(typingText)
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(10)
-                            .shadow(color: .black, radius: 10, x: 5, y: 5)
-                            .padding(.horizontal, 40)
-                            .onAppear(perform: startTyping)
-                            .onDisappear(perform: stopTyping)
-                    }
+                    IdeaInputView(
+                        showTextField: $showTextField,
+                        isEditing: $isEditing,
+                        idea: $idea,
+                        typingText: $typingText,
+                        startTyping: startTyping,
+                        stopTyping: stopTyping,
+                        generateIdeas: generateIdeas
+                    )
                 } else {
-                    // Top idea text
-                    Text(idea)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(10)
-                        .shadow(color: .black, radius: 10, x: 5, y: 5)
-                        .padding(.horizontal, 40)
-
-                    // Swipable Card
-                    SwipableCard(ideas: $ideas, activeIdeaIndex: $activeIdeaIndex, idea: $idea, generateIdeas: generateIdeas)
-                    
-                    // Bottom index and count
-                    if let activeIndex = activeIdeaIndex {
-                        Text("Idea \(activeIndex + 1) of \(ideas.count)")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(10)
-                            .shadow(color: .black, radius: 10, x: 5, y: 5)
-                            .padding(.horizontal, 40)
-                    }
+                    IdeaListView(
+                        ideas: $ideas,
+                        activeIdeaIndex: $activeIdeaIndex,
+                        idea: $idea,
+                        generateIdeas: generateIdeas
+                    )
                 }
+
                 Spacer()
                 Spacer()
             }
@@ -110,49 +60,25 @@ struct ContentView: View {
                     }
                 }
             }
-            
-            // ProgressView for loading state
+
             if isLoading {
-                ZStack {
-                    Color.black.opacity(0.3)
-                        .edgesIgnoringSafeArea(.all)
-                    
-                    VStack {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.5)
-                            .padding(.bottom, 10)
-                        
-                        Text("Generating Ideas...")
-                            .foregroundColor(.white)
-                            .font(.headline)
-                    }
-                    .padding()
-                    .background(
-                        LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
-                            .opacity(0.9)
-                    )
-                    .cornerRadius(10)
-                    .shadow(color: .black, radius: 10, x: 5, y: 5)
-                }
+                LoadingView()
             }
-
-
         }
         .animation(.easeInOut(duration: 0.5), value: ideas)
     }
-    
+
     private func startTyping() {
         timer = Timer.scheduledTimer(withTimeInterval: typingSpeed, repeats: true) { _ in
             updateText()
         }
     }
-    
+
     private func stopTyping() {
         timer?.invalidate()
         timer = nil
     }
-    
+
     private func updateText() {
         if typingText.count < fullText.count {
             typingText.append(fullText[fullText.index(fullText.startIndex, offsetBy: typingText.count)])
@@ -164,18 +90,18 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func generateIdeas(basedOn idea: String) {
         guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             print("Invalid URL")
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer OPENAI_API_KEY", forHTTPHeaderField: "Authorization")
-        
+
         let body: [String: Any] = [
             "model": "gpt-3.5-turbo",
             "messages": [
@@ -185,22 +111,22 @@ struct ContentView: View {
             "n": 5
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
-        
+
         // Show loading indicator
         isLoading = true
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
-            
+
             DispatchQueue.main.async {
                 // Hide loading indicator
                 self.isLoading = false
             }
-            
+
             guard let data = data, error == nil else {
                 print("Network error: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
-            
+
             if let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                let choices = jsonResponse["choices"] as? [[String: Any]] {
                 DispatchQueue.main.async {
@@ -218,6 +144,128 @@ struct ContentView: View {
                 print("Invalid response from server")
             }
         }.resume()
+    }
+}
+
+struct HeaderView: View {
+    @Binding var showTextField: Bool
+    @Binding var ideas: [String]
+
+    var body: some View {
+        Text("BrainStormer")
+            .font(.largeTitle)
+            .fontWeight(.bold)
+            .foregroundColor(.white)
+            .padding()
+            .background(LinearGradient(gradient: Gradient(colors: [.black.opacity(0.8), .black.opacity(0.6)]), startPoint: .top, endPoint: .bottom))
+            .cornerRadius(10)
+            .shadow(color: .black, radius: 10, x: 5, y: 5)
+            .opacity((!showTextField && ideas.isEmpty) ? 1 : 0)
+    }
+}
+
+struct IdeaInputView: View {
+    @Binding var showTextField: Bool
+    @Binding var isEditing: Bool
+    @Binding var idea: String
+    @Binding var typingText: String
+    let startTyping: () -> Void
+    let stopTyping: () -> Void
+    let generateIdeas: (String) -> Void
+
+    var body: some View {
+        if showTextField {
+            TextField("What's on your mind?", text: $idea, onCommit: {
+                if !idea.isEmpty {
+                    generateIdeas(idea)
+                    idea = ""
+                    showTextField = false
+                    isEditing = false
+                }
+            })
+            .textFieldStyle(RoundedBorderTextFieldStyle())
+            .padding()
+            .background(Color.white.opacity(0.8))
+            .cornerRadius(10)
+            .shadow(color: .black, radius: 10, x: 5, y: 5)
+            .padding(.horizontal, 40)
+            .onTapGesture {
+                isEditing = true
+            }
+        } else {
+            Text(typingText)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(10)
+                .shadow(color: .black, radius: 10, x: 5, y: 5)
+                .padding(.horizontal, 40)
+                .onAppear(perform: startTyping)
+                .onDisappear(perform: stopTyping)
+        }
+    }
+}
+
+struct IdeaListView: View {
+    @Binding var ideas: [String]
+    @Binding var activeIdeaIndex: Int?
+    @Binding var idea: String
+    let generateIdeas: (String) -> Void
+
+    var body: some View {
+        VStack {
+            Text(idea)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(10)
+                .shadow(color: .black, radius: 10, x: 5, y: 5)
+                .padding(.horizontal, 40)
+
+            SwipableCard(ideas: $ideas, activeIdeaIndex: $activeIdeaIndex, idea: $idea, generateIdeas: generateIdeas)
+
+            if let activeIndex = activeIdeaIndex {
+                Text("Idea \(activeIndex + 1) of \(ideas.count)")
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(10)
+                    .shadow(color: .black, radius: 10, x: 5, y: 5)
+                    .padding(.horizontal, 40)
+            }
+        }
+    }
+}
+
+struct LoadingView: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .edgesIgnoringSafeArea(.all)
+
+            VStack {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+                    .padding(.bottom, 10)
+
+                Text("Generating Ideas...")
+                    .foregroundColor(.white)
+                    .font(.headline)
+            }
+            .padding()
+            .background(
+                LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .opacity(0.9)
+            )
+            .cornerRadius(10)
+            .shadow(color: .black, radius: 10, x: 5, y: 5)
+        }
     }
 }
 
@@ -251,7 +299,7 @@ struct SwipableCard: View {
                                     withAnimation {
                                         if activeIndex == ideas.count - 1 {
                                             generateIdeas(idea)
-                                        }else {
+                                        } else {
                                             activeIdeaIndex = activeIndex + 1
                                         }
                                     }
