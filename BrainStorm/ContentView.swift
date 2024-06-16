@@ -20,6 +20,7 @@ struct ContentView: View {
     private let pauseDuration: Double = 1.0
     @State private var timer: Timer?
     @State private var holdOn = false
+    @State private var collectedIdeaIndex: Set<Int> = Set<Int>()
     
     private func resetStates() {
         idea = ""
@@ -29,6 +30,7 @@ struct ContentView: View {
         activeIdeaIndex = nil
         isLoading = false
         typingText = ""
+        collectedIdeaIndex.removeAll()
     }
     
     var body: some View {
@@ -56,6 +58,7 @@ struct ContentView: View {
                         ideas: $ideas,
                         activeIdeaIndex: $activeIdeaIndex,
                         idea: $idea,
+                        collectedIdeaIndex: $collectedIdeaIndex,
                         generateIdeas: generateIdeas
                     )
                 }
@@ -229,6 +232,7 @@ struct IdeaListView: View {
     @Binding var ideas: [String]
     @Binding var activeIdeaIndex: Int?
     @Binding var idea: String
+    @Binding var collectedIdeaIndex: Set<Int>
     let generateIdeas: (String) -> Void
 
     var body: some View {
@@ -243,7 +247,8 @@ struct IdeaListView: View {
                 .shadow(color: .black, radius: 10, x: 5, y: 5)
                 .padding(.horizontal, 40)
 
-            SwipableCard(ideas: $ideas, activeIdeaIndex: $activeIdeaIndex, idea: $idea, generateIdeas: generateIdeas)
+            SwipableCard(collectedIdeaIndex: $collectedIdeaIndex,
+                ideas: $ideas, activeIdeaIndex: $activeIdeaIndex, idea: $idea, generateIdeas: generateIdeas)
 
             if let activeIndex = activeIdeaIndex {
                 Text("Idea \(activeIndex + 1) of \(ideas.count)")
@@ -287,6 +292,7 @@ struct LoadingView: View {
 }
 
 struct SwipableCard: View {
+    @Binding var collectedIdeaIndex: Set<Int>
     @Binding var ideas: [String]
     @Binding var activeIdeaIndex: Int?
     @Binding var idea: String
@@ -298,7 +304,9 @@ struct SwipableCard: View {
     var body: some View {
         ZStack {
             if let activeIndex = activeIdeaIndex {
-                CardView(text: ideas[activeIndex])
+                CardView(collectedIdeaIndex: $collectedIdeaIndex,
+                    text: ideas[activeIndex],
+                         index: activeIndex)
                     .frame(maxWidth: .infinity, maxHeight: 500)
                     .background(Color.clear)
                     .cornerRadius(10)
@@ -345,7 +353,9 @@ struct SwipableCard: View {
 }
 
 struct CardView: View {
+    @Binding var collectedIdeaIndex: Set<Int>
     let text: String
+    let index: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -358,6 +368,23 @@ struct CardView: View {
                     .background(LinearGradient(gradient: Gradient(colors: [.orange, .red]), startPoint: .topLeading, endPoint: .bottomTrailing))
                     .cornerRadius(5)
                 Spacer()
+                
+                ZStack {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: collectedIdeaIndex.contains(index) ? "star.fill" : "star")
+                        .font(.system(size: 24))
+                        .foregroundColor(.yellow)
+                        .onTapGesture {
+                            if collectedIdeaIndex.contains(index){
+                                collectedIdeaIndex.remove(index)
+                            }else{
+                                collectedIdeaIndex.insert(index)
+                            }
+                        }
+                }
             }
             
             Text(text)
