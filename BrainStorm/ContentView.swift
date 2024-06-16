@@ -19,14 +19,25 @@ struct ContentView: View {
     private let typingSpeed: Double = 0.1
     private let pauseDuration: Double = 1.0
     @State private var timer: Timer?
-
+    @State private var holdOn = false
+    
+    private func resetStates() {
+        idea = ""
+        ideas.removeAll()
+        showTextField = false
+        isEditing = false
+        activeIdeaIndex = nil
+        isLoading = false
+        typingText = ""
+    }
+    
     var body: some View {
         ZStack {
             LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
                 .edgesIgnoringSafeArea(.all)
 
             VStack(spacing: 20) {
-                HeaderView(showTextField: $showTextField, ideas: $ideas)
+                HeaderView(showTextField: $showTextField,  ideas: $ideas, resetAll: resetStates)
 
                 Spacer()
 
@@ -80,13 +91,16 @@ struct ContentView: View {
     }
 
     private func updateText() {
+        if holdOn {
+            return
+        }
         if typingText.count < fullText.count {
             typingText.append(fullText[fullText.index(fullText.startIndex, offsetBy: typingText.count)])
         } else {
-            timer?.invalidate()
+            holdOn.toggle()
             DispatchQueue.main.asyncAfter(deadline: .now() + pauseDuration) {
                 typingText = ""
-                startTyping()
+                holdOn.toggle()
             }
         }
     }
@@ -150,7 +164,8 @@ struct ContentView: View {
 struct HeaderView: View {
     @Binding var showTextField: Bool
     @Binding var ideas: [String]
-
+    let resetAll: () -> Void
+    
     var body: some View {
         Text("BrainStormer")
             .font(.largeTitle)
@@ -160,7 +175,9 @@ struct HeaderView: View {
             .background(LinearGradient(gradient: Gradient(colors: [.black.opacity(0.8), .black.opacity(0.6)]), startPoint: .top, endPoint: .bottom))
             .cornerRadius(10)
             .shadow(color: .black, radius: 10, x: 5, y: 5)
-            .opacity((!showTextField && ideas.isEmpty) ? 1 : 0)
+            .onTapGesture {
+                resetAll()
+            }
     }
 }
 
