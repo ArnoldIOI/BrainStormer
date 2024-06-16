@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var timer: Timer?
     @State private var holdOn = false
     @State private var collectedIdeaIndex: Set<Int> = Set<Int>()
+    @State private var goToSummary = false
     
     private func resetStates() {
         idea = ""
@@ -31,6 +32,7 @@ struct ContentView: View {
         isLoading = false
         typingText = ""
         collectedIdeaIndex.removeAll()
+        goToSummary = false
     }
     
     var body: some View {
@@ -42,29 +44,35 @@ struct ContentView: View {
                 HeaderView(showTextField: $showTextField,  ideas: $ideas, resetAll: resetStates)
 
                 Spacer()
+                if goToSummary {
+                    SummaryView(ideas: ideas.filter { collectedIdeaIndex.contains(ideas.firstIndex(of: $0)!) })
 
-                if ideas.isEmpty {
-                    IdeaInputView(
-                        showTextField: $showTextField,
-                        isEditing: $isEditing,
-                        idea: $idea,
-                        typingText: $typingText,
-                        startTyping: startTyping,
-                        stopTyping: stopTyping,
-                        generateIdeas: generateIdeas
-                    )
                 } else {
-                    IdeaListView(
-                        ideas: $ideas,
-                        activeIdeaIndex: $activeIdeaIndex,
-                        idea: $idea,
-                        collectedIdeaIndex: $collectedIdeaIndex,
-                        generateIdeas: generateIdeas
-                    )
+                    if ideas.isEmpty {
+                        IdeaInputView(
+                            showTextField: $showTextField,
+                            isEditing: $isEditing,
+                            idea: $idea,
+                            typingText: $typingText,
+                            startTyping: startTyping,
+                            stopTyping: stopTyping,
+                            generateIdeas: generateIdeas
+                        )
+                    } else {
+                        IdeaListView(
+                            ideas: $ideas,
+                            activeIdeaIndex: $activeIdeaIndex,
+                            idea: $idea,
+                            collectedIdeaIndex: $collectedIdeaIndex,
+                            goToSummary: $goToSummary,
+                            generateIdeas: generateIdeas
+                        )
+                    }
+
+                    Spacer()
+                    Spacer()
                 }
 
-                Spacer()
-                Spacer()
             }
             .padding()
             .onTapGesture {
@@ -164,6 +172,38 @@ struct ContentView: View {
     }
 }
 
+struct SummaryView: View {
+    var ideas: [String]
+
+    var body: some View {
+        VStack {
+            Text("Summary")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding()
+                .background(LinearGradient(gradient: Gradient(colors: [.black.opacity(0.8), .black.opacity(0.6)]), startPoint: .top, endPoint: .bottom))
+                .cornerRadius(10)
+                .shadow(color: .black, radius: 10, x: 5, y: 5)
+
+            ScrollView {
+                ForEach(ideas, id: \.self) { idea in
+                    Text(idea)
+                        .font(.body)
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(color: .black, radius: 5, x: 5, y: 5)
+                        .padding(.horizontal, 40)
+                        .padding(.vertical, 10)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
 struct HeaderView: View {
     @Binding var showTextField: Bool
     @Binding var ideas: [String]
@@ -233,6 +273,7 @@ struct IdeaListView: View {
     @Binding var activeIdeaIndex: Int?
     @Binding var idea: String
     @Binding var collectedIdeaIndex: Set<Int>
+    @Binding var goToSummary: Bool
     let generateIdeas: (String) -> Void
 
     var body: some View {
@@ -259,6 +300,10 @@ struct IdeaListView: View {
                     .cornerRadius(10)
                     .shadow(color: .black, radius: 10, x: 5, y: 5)
                     .padding(.horizontal, 40)
+                    .onTapGesture {
+                        // Summary of Ideas
+                        goToSummary = true
+                    }
             }
         }
     }
